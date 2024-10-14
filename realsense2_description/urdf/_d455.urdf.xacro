@@ -1,58 +1,28 @@
 <?xml version="1.0"?>
-
-<!--
-# Copyright 2023 Intel Corporation. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
--->
-
-<!--
-This is the URDF model for the Intel RealSense 430 camera, in its
-aluminum peripherial evaluation case.
--->
-
 <robot name="sensor_d455" xmlns:xacro="http://ros.org/wiki/xacro">
-  <!-- Includes -->
+
   <xacro:include filename="$(find realsense2_description)/urdf/_materials.urdf.xacro" />
-  <xacro:include filename="$(find realsense2_description)/urdf/_usb_plug.urdf.xacro" />
+  <!-- <xacro:include filename="$(find realsense2_description)/urdf/_usb_plug.urdf.xacro" /> -->
 
   <xacro:macro name="sensor_d455" params="parent *origin name:=camera use_nominal_extrinsics:=false">
     <xacro:arg name="add_plug" default="false" />
     <xacro:property name="M_PI" value="3.1415926535897931" />
 
-    <!-- The following values are approximate, and the camera node
-     publishing TF values with actual calibrated camera extrinsic values -->
+    <!-- The following values are approximate, and the camera node publishing TF values with actual calibrated camera extrinsic values -->
     <xacro:property name="d455_cam_depth_to_infra1_offset" value="0.0"/>
     <xacro:property name="d455_cam_depth_to_infra2_offset" value="-0.095"/>
     <xacro:property name="d455_cam_depth_to_color_offset" value="-0.059"/>
 
-
-    <!-- The following values model the aluminum peripherial case for the
-  	d455 camera, with the camera joint represented by the actual
-  	peripherial camera tripod mount -->
+    <!-- The following values model the aluminum peripherial case for the d455 camera, with the camera joint represented by the actual peripherial camera tripod mount -->
     <xacro:property name="d455_cam_width" value="0.124"/>
     <xacro:property name="d455_cam_height" value="0.029"/>
     <xacro:property name="d455_cam_depth" value="0.026"/>
     <xacro:property name="d455_cam_mount_from_center_offset" value="0.0158"/>
-    <!-- glass cover is 0.1 mm inwards from front aluminium plate -->
-    <xacro:property name="d455_glass_to_front" value="0.1e-3"/>
-    <!-- see datasheet Revision 009, Fig. 4-4 page 68 -->
-    <xacro:property name="d455_zero_depth_to_glass" value="4.55e-3"/>
-    <!-- convenience precomputation to avoid clutter-->
-    <xacro:property name="d455_mesh_x_offset" value="${d455_cam_mount_from_center_offset-d455_glass_to_front-d455_zero_depth_to_glass}"/>
+    <xacro:property name="d455_glass_to_front" value="0.1e-3"/><!-- glass cover is 0.1 mm inwards from front aluminium plate -->
+    <xacro:property name="d455_zero_depth_to_glass" value="4.55e-3"/><!-- see datasheet Revision 009, Fig. 4-4 page 68 -->
+    <xacro:property name="d455_mesh_x_offset" value="${d455_cam_mount_from_center_offset-d455_glass_to_front-d455_zero_depth_to_glass}"/><!-- convenience precomputation to avoid clutter-->
 
-    <!-- The following offset is relative to the physical d455 camera peripherial
-  	camera tripod mount -->
+    <!-- The following offset is relative to the physical d455 camera peripherial camera tripod mount -->
     <xacro:property name="d455_cam_depth_px" value="${d455_cam_mount_from_center_offset}"/>
     <xacro:property name="d455_cam_depth_py" value="0.0475"/>
     <xacro:property name="d455_cam_depth_pz" value="${d455_cam_height/2}"/>
@@ -206,5 +176,120 @@ aluminum peripherial evaluation case.
         <origin xyz="${-0.00406-d455_cam_depth_px} ${-0.03701-d455_cam_depth_py} ${-d455_cam_depth_pz}" rpy="${M_PI/2} 0 0"/>
       </xacro:usb_plug>
     </xacro:if>
+    <gazebo reference="${name}_depth_optical_frame">
+        <sensor name="cameradepth" type="depth_camera">
+            <pose>0 0 0 0 0 0</pose>
+            <camera name="camera">
+                <horizontal_fov>1.518</horizontal_fov> <!-- 87 degrees for depth -->
+                <image>
+                    <width>1280</width>
+                    <height>720</height>
+                </image>
+                <clip>
+                    <near>0.1</near>
+                    <far>100.0</far>
+                </clip>
+            </camera>
+
+            <always_on>1</always_on>
+            <update_rate>30</update_rate>
+            <visualize>true</visualize>
+            <gz_frame_id>${name}_depth_optical_frame</gz_frame_id>
+            <topic>${name}/camera_depth</topic>
+        </sensor>
+    </gazebo>
+    <gazebo reference="${name}_color_optical_frame">
+        <sensor name="cameracolor" type="camera">
+            <pose>0 0 0 0 0 0</pose>
+            <camera name="camera">
+                <horizontal_fov>1.518</horizontal_fov> <!-- 87 degrees for depth -->
+                <image>
+                    <width>1280</width>
+                    <height>720</height>
+                    <format>RGB_INT8</format>
+                </image>
+                <clip>
+                    <near>0.1</near>
+                    <far>100.0</far>
+                </clip>
+                <noise>
+                    <type>gaussian</type>
+                    <mean>0.0</mean>
+                    <stddev>0.007</stddev>
+                </noise>
+            </camera>
+            <always_on>1</always_on>
+            <update_rate>30</update_rate>
+            <visualize>true</visualize>
+            <ignition_frame_id>${name}_color_optical_frame</ignition_frame_id>
+            <topic>${name}/camera_color</topic>
+        </sensor>
+    </gazebo>
+    <gazebo reference="${name}_infra1_optical_frame">
+        <sensor name="cameraired1" type="camera">
+        <camera name="camera">
+            <horizontal_fov>1.57</horizontal_fov>
+            <image>
+            <width>1280</width>
+            <height>720</height>
+            <format>L_INT8</format>
+            </image>
+            <clip>
+            <near>0.1</near>
+            <far>100</far>
+            </clip>
+            <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.05</stddev>
+            </noise>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>30</update_rate>
+        <visualize>0</visualize>
+        <topic>${name}/camera_ired1</topic>
+        <ignition_frame_id>${name}_infra1_optical_frame</ignition_frame_id>
+        </sensor>
+    </gazebo>
+    <gazebo reference="${name}_infra2_optical_frame">
+        <sensor name="cameraired2" type="camera">
+            <camera name="camera">
+                <horizontal_fov>1.57</horizontal_fov>
+                <image>
+                    <width>1280</width>
+                    <height>720</height>
+                    <format>L_INT8</format>
+                </image>
+                <clip>
+                    <near>0.1</near>
+                    <far>100</far>
+                </clip>
+                <noise>
+                    <type>gaussian</type>
+                    <mean>0.0</mean>
+                    <stddev>0.05</stddev>
+                </noise>
+            </camera>
+            <always_on>1</always_on>
+            <update_rate>30</update_rate>
+            <visualize>0</visualize>
+            <topic>${name}/camera_ired2</topic>
+            <ignition_frame_id>${name}_infra2_optical_frame</ignition_frame_id>
+        </sensor>
+    </gazebo>
+    <gazebo>
+        <plugin filename="ignition-gazebo-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+            <publish_link_pose>true</publish_link_pose>
+            <publish_visual_pose>false</publish_visual_pose>
+            <publish_collision_pose>false</publish_collision_pose>
+            <publish_sensor_pose>false</publish_sensor_pose>
+            <publish_model_pose>false</publish_model_pose>
+            <publish_nested_model_pose>true</publish_nested_model_pose>
+            <use_pose_vector_msg>true</use_pose_vector_msg>
+            <update_frequency>10</update_frequency>
+            <static_publisher>false</static_publisher>
+            <static_update_frequency>10</static_update_frequency>
+        </plugin>
+    </gazebo>
   </xacro:macro>
 </robot>
